@@ -7,6 +7,7 @@ const jwt = require("jsonwebtoken");
 
 const multer = require("multer");
 const path = require("path");
+
 const app = express();
 const bodyParser = require("body-parser");
 
@@ -15,20 +16,21 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // MySQL Connection
-
-const db = mysql.createConnection({
-  host:process.env.DB_HOST,
-  user:process.env.DB_USER,
-  password:process.env.DB_PASSWORD,
-  database:process.env.DB_NAME,
-  port:process.env.DB_PORT,
+const db = mysql.createPool({
+  connectionLimit: 10,             // add a limit for connections in pool
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
 });
 
-db.connect((err) => {
+db.getConnection((err, connection) => {
   if (err) {
     console.error("MySQL Connection Failed: ", err);
   } else {
     console.log("MySQL Connected Successfully ✅");
+    connection.release();
   }
 });
 

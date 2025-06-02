@@ -8,7 +8,7 @@ const bcrypt = require("bcrypt");
 const app = express();
 const bodyParser = require('body-parser');
 
-import dotenv from 'dotenv';
+const dotenv = require("dotenv");
 dotenv.config();
 
 app.use(cors());

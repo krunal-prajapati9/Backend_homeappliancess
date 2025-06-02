@@ -1,37 +1,34 @@
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config(); // 👈 this must be first!
 const mysql = require("mysql");
+
 const jwt = require("jsonwebtoken");
 
- const multer = require("multer");
- const path = require('path');
+const multer = require("multer");
+const path = require("path");
 const app = express();
-const bodyParser = require('body-parser');
-
-const dotenv = require("dotenv");
-dotenv.config();
+const bodyParser = require("body-parser");
 
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // MySQL Connection
+
 const db = mysql.createConnection({
-host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
+  host:process.env.DB_HOST,
+  user:process.env.DB_USER,
+  password:process.env.DB_PASSWORD,
+  database:process.env.DB_NAME,
+  port:process.env.DB_PORT,
 });
 
 db.connect((err) => {
   if (err) {
     console.error("MySQL Connection Failed: ", err);
-    // process.exit(1); // Stop server if DB is not connected
   } else {
-    console.log("Database Connected Successfully");
+    console.log("MySQL Connected Successfully ✅");
   }
 });
 
@@ -106,7 +103,6 @@ app.delete("/customer/:id", (req, res) => {
   });
 });
 
-
 // api to add serviceprovider complain
 app.post("/submit-serviceprovidercomplaint", (req, res) => {
   const { serviceprovider_id, complain_description } = req.body;
@@ -116,7 +112,8 @@ app.post("/submit-serviceprovidercomplaint", (req, res) => {
   }
 
   // Insert complaint into the database
-  const query = "INSERT INTO complain (serviceprovider_id, complain_description) VALUES (?, ?)";
+  const query =
+    "INSERT INTO complain (serviceprovider_id, complain_description) VALUES (?, ?)";
   db.query(query, [serviceprovider_id, complain_description], (err, result) => {
     if (err) {
       console.error("Error inserting complaint:", err);
@@ -125,7 +122,6 @@ app.post("/submit-serviceprovidercomplaint", (req, res) => {
     res.json({ success: true, message: "Complaint submitted successfully" });
   });
 });
-
 
 // Api for fetching complainlist
 app.get("/complainlist", (req, res) => {
@@ -251,7 +247,8 @@ app.delete("/categories/:id", async (req, res) => {
               return res
                 .status(500)
                 .json({ message: "Error deleting category" });
-            }npm 
+            }
+            npm;
             res.json({ message: "Deleted Category" });
           }
         );
@@ -397,7 +394,9 @@ app.post("/api/serviceproviderregister", async (req, res) => {
       return res.status(400).json({ error: "Invalid email format." });
     }
     if (!password || password.length < 8) {
-      return res.status(400).json({ error: "Password must be at least 8 characters." });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 8 characters." });
     }
 
     // Check if email already exists
@@ -431,68 +430,68 @@ app.post("/api/serviceproviderregister", async (req, res) => {
     console.error("Error: ", error);
     res.status(500).json({ error: "Server error." });
   }
-});  
-
-
-
-
-
-
+});
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-      cb(null, 'uploads/');
+    cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
-      cb(null, Date.now() + '-' + file.originalname);
+    cb(null, Date.now() + "-" + file.originalname);
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage });
 
 // API Route to Insert Data into MySQL
 app.post("/add-product", upload.single("image"), (req, res) => {
-  const { productName, description, price, quantity, brand, subCategory } = req.body;
+  const { productName, description, price, quantity, brand, subCategory } =
+    req.body;
 
-  const subCategoryQuery = "SELECT p_sub_cata_id FROM product_sub_category WHERE p_sub_cata_name = ?";
+  const subCategoryQuery =
+    "SELECT p_sub_cata_id FROM product_sub_category WHERE p_sub_cata_name = ?";
   db.query(subCategoryQuery, [subCategory], (err, subCategoryRows) => {
-      if (err) {
-          console.error('Subcategory query error:', err);
+    if (err) {
+      console.error("Subcategory query error:", err);
+      // db.end();
+      return res.status(500).json({ message: "Internal server error." });
+    }
+    console.log("subcategoryRows:", subCategoryRows);
+    if (subCategoryRows.length === 0) {
+      // db.end();
+      return res.status(400).json({ message: "Subcategory not found." });
+    }
+
+    const subCategoryId = subCategoryRows[0].p_sub_cata_id;
+
+    console.log("subCategoryId:", subCategoryId);
+
+    const insertQuery =
+      "INSERT INTO product_details(product_name, product_description, product_price, product_quantity, product_image, product_BrandName, p_sub_cata_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    db.query(
+      insertQuery,
+      [
+        productName,
+        description,
+        price,
+        quantity,
+        req.file.filename,
+        brand,
+        subCategoryId,
+      ],
+      (err) => {
+        if (err) {
+          console.error("Product insert query error:", err);
           // db.end();
-          return res.status(500).json({ message: 'Internal server error.' });
+          return res.status(500).json({ message: "Internal server error." });
+        }
+
+        // db.end();
+        res.status(200).json({ message: "Product added successfully." });
       }
-      console.log("subcategoryRows:", subCategoryRows);
-      if (subCategoryRows.length === 0) {
-          // db.end();
-          return res.status(400).json({ message: "Subcategory not found." });
-      }
-
-      const subCategoryId = subCategoryRows[0].p_sub_cata_id;
-          
-      console.log("subCategoryId:", subCategoryId);
-
-      const insertQuery =
-          "INSERT INTO product_details(product_name, product_description, product_price, product_quantity, product_image, product_BrandName, p_sub_cata_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
-      db.query(insertQuery, [
-          productName,
-          description,
-          price,
-          quantity,
-          req.file.filename,
-          brand,
-          subCategoryId,
-      ], (err) => {
-          if (err) {
-              console.error('Product insert query error:', err);
-              // db.end();
-              return res.status(500).json({ message: 'Internal server error.' });
-          }
-
-          // db.end();
-          res.status(200).json({ message: "Product added successfully." });
-      });
-  });
+    );
+  });
 });
 
 // Multer Storage Configuration
@@ -506,11 +505,6 @@ app.post("/add-product", upload.single("image"), (req, res) => {
 // });
 
 // const upload = multer({ storage: storage });
-
-
-
-
-
 
 app.post("/api/feedback", (req, res) => {
   const { id, description, userId } = req.body;
@@ -529,9 +523,7 @@ app.post("/api/feedback", (req, res) => {
   );
 });
 
-
-
-///login route for service provider 
+///login route for service provider
 app.post("/ServiceProviderLogin", (req, res) => {
   const { email, password } = req.body;
 
@@ -541,18 +533,24 @@ app.post("/ServiceProviderLogin", (req, res) => {
     (err, results) => {
       if (err) {
         console.error("Database error:", err);
-        return res.status(500).json({ success: false, message: "Server Error" });
+        return res
+          .status(500)
+          .json({ success: false, message: "Server Error" });
       }
 
       if (results.length === 0) {
-        return res.status(400).json({ success: false, message: "Invalid credentials" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid credentials" });
       }
 
       const user = results[0];
 
       // Compare password (In a real app, you should hash passwords)
       if (user.password !== password) {
-        return res.status(400).json({ success: false, message: "Invalid credentials" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid credentials" });
       }
 
       // Create a JWT token
@@ -563,89 +561,94 @@ app.post("/ServiceProviderLogin", (req, res) => {
       );
 
       // Return token and serviceprovider_id
-      res.json({ success: true, token, serviceprovider_id: user.serviceprovider_id });
+      res.json({
+        success: true,
+        token,
+        serviceprovider_id: user.serviceprovider_id,
+      });
     }
   );
 });
-
-
-
-
-
 
 // add serviceprovider complain in database
 app.post("/submit-service-complaint", (req, res) => {
   const { serviceprovider_id, message } = req.body;
 
   if (!serviceprovider_id || !message) {
-    return res.status(400).json({ error: "Service Provider ID and Complaint message are required" });
+    return res.status(400).json({
+      error: "Service Provider ID and Complaint message are required",
+    });
   }
 
   // Validate serviceprovider_id exists in the service_provider table
-  db.query("SELECT * FROM service_provider WHERE serviceprovider_id = ?", [serviceprovider_id], (err, result) => {
-    if (err) {
-      console.error("Database error:", err);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    if (result.length === 0) {
-      return res.status(400).json({ error: "Invalid Service Provider ID" });
-    }
-
-    // Insert complaint into database
-    const query = "INSERT INTO complain (serviceprovider_id, complain_description) VALUES (?, ?)";
-    db.query(query, [serviceprovider_id, message], (err, result) => {
+  db.query(
+    "SELECT * FROM service_provider WHERE serviceprovider_id = ?",
+    [serviceprovider_id],
+    (err, result) => {
       if (err) {
-        console.error("Error inserting complaint:", err);
+        console.error("Database error:", err);
         return res.status(500).json({ error: "Database error" });
       }
-      res.json({ success: true, message: "Service provider complaint submitted successfully" });
-    });
-  });
+
+      if (result.length === 0) {
+        return res.status(400).json({ error: "Invalid Service Provider ID" });
+      }
+
+      // Insert complaint into database
+      const query =
+        "INSERT INTO complain (serviceprovider_id, complain_description) VALUES (?, ?)";
+      db.query(query, [serviceprovider_id, message], (err, result) => {
+        if (err) {
+          console.error("Error inserting complaint:", err);
+          return res.status(500).json({ error: "Database error" });
+        }
+        res.json({
+          success: true,
+          message: "Service provider complaint submitted successfully",
+        });
+      });
+    }
+  );
 });
 
-
-
-
-
-
-
-
-
-
-// add service provider feedback in database 
+// add service provider feedback in database
 
 app.post("/submit-serviceprovider-feedback", (req, res) => {
   const { serviceprovider_id, feedback } = req.body;
 
   if (!serviceprovider_id || !feedback) {
-      return res.status(400).json({ error: "Service Provider ID and Feedback are required" });
+    return res
+      .status(400)
+      .json({ error: "Service Provider ID and Feedback are required" });
   }
 
   // Check if service provider exists before inserting feedback
-  db.query("SELECT * FROM service_provider WHERE serviceprovider_id = ?", [serviceprovider_id], (err, result) => {
+  db.query(
+    "SELECT * FROM service_provider WHERE serviceprovider_id = ?",
+    [serviceprovider_id],
+    (err, result) => {
       if (err) {
-          console.error("Database error:", err);
-          return res.status(500).json({ error: "Database error" });
+        console.error("Database error:", err);
+        return res.status(500).json({ error: "Database error" });
       }
 
       if (result.length === 0) {
-          return res.status(400).json({ error: "Invalid Service Provider ID" });
+        return res.status(400).json({ error: "Invalid Service Provider ID" });
       }
 
       // Insert feedback into the feedback table
-      const query = "INSERT INTO feedback (serviceprovider_id, feedback_description) VALUES (?, ?)";
+      const query =
+        "INSERT INTO feedback (serviceprovider_id, feedback_description) VALUES (?, ?)";
       db.query(query, [serviceprovider_id, feedback], (err, result) => {
-          if (err) {
-              console.error("Error inserting feedback:", err);
-              return res.status(500).json({ error: "Database error" });
-          }
-          res.json({ success: true, message: "Feedback submitted successfully" });
+        if (err) {
+          console.error("Error inserting feedback:", err);
+          return res.status(500).json({ error: "Database error" });
+        }
+        res.json({ success: true, message: "Feedback submitted successfully" });
       });
-  });
+    }
+  );
 });
-   
-
 
 //***************************************   User's  Api  *********************************************************************************************************** */
 
@@ -702,7 +705,6 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-
 // User login route
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
@@ -713,12 +715,16 @@ app.post("/api/login", (req, res) => {
     (err, results) => {
       if (err) return res.status(500).send("Server Error");
       if (results.length === 0) {
-        return res.status(400).json({ success: false, message: "Invalid credentials" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid credentials" });
       }
 
       const user = results[0];
       if (user.password !== password) {
-        return res.status(400).json({ success: false, message: "Invalid credentials" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid credentials" });
       }
 
       // Generate JWT token
@@ -736,43 +742,42 @@ app.post("/submit-feedback", (req, res) => {
   const { user_id, feedback } = req.body;
 
   if (!user_id || !feedback) {
-      return res.status(400).json({ error: "User ID and Feedback are required" });
+    return res.status(400).json({ error: "User ID and Feedback are required" });
   }
-
 
   // Check if user exists before inserting feedback
   db.query("SELECT * FROM user WHERE user_id = ?", [user_id], (err, result) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (result.length === 0) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    // Insert feedback into database
+    const query = "INSERT INTO userfeedback (user_id, message) VALUES (?, ?)";
+    db.query(query, [user_id, feedback], (err, result) => {
       if (err) {
-          console.error("Database error:", err);
-          return res.status(500).json({ error: "Database error" });
+        console.error("Error inserting feedback:", err);
+        return res.status(500).json({ error: "Database error" });
       }
-
-      if (result.length === 0) {
-          return res.status(400).json({ error: "Invalid user ID" });
-      }
-
-      // Insert feedback into database
-      const query = "INSERT INTO userfeedback (user_id, message) VALUES (?, ?)";
-      db.query(query, [user_id, feedback], (err, result) => {
-          if (err) {
-              console.error("Error inserting feedback:", err);
-              return res.status(500).json({ error: "Database error" });
-          }
-          res.json({ success: true, message: "Feedback submitted successfully" });
-      });
+      res.json({ success: true, message: "Feedback submitted successfully" });
+    });
   });
 });
 
-
 //user complains
-
 
 app.post("/submit-complaint", (req, res) => {
   const { user_id, message } = req.body;
 
   // Check if required fields are present
   if (!user_id || !message) {
-    return res.status(400).json({ error: "User ID and Complaint message are required" });
+    return res
+      .status(400)
+      .json({ error: "User ID and Complaint message are required" });
   }
 
   // Validate user_id exists in the user table
@@ -787,7 +792,8 @@ app.post("/submit-complaint", (req, res) => {
     }
 
     // Insert complaint into database
-    const query = "INSERT INTO usercomplain (user_id, message, created_at) VALUES (?, ?, NOW())";
+    const query =
+      "INSERT INTO usercomplain (user_id, message, created_at) VALUES (?, ?, NOW())";
     db.query(query, [user_id, message], (err, result) => {
       if (err) {
         console.error("Error inserting complaint:", err);
@@ -797,9 +803,6 @@ app.post("/submit-complaint", (req, res) => {
     });
   });
 });
-
-
-
 
 // Fetch all customer feedback
 app.get("/userfeedbacklist", (req, res) => {
@@ -827,9 +830,6 @@ app.get("/userfeedbacklist", (req, res) => {
   });
 });
 
-
-
-
 //fetch all customer comlaints
 app.get("/usercomplainlist", (req, res) => {
   const { start_date, end_date } = req.query;
@@ -856,25 +856,6 @@ app.get("/usercomplainlist", (req, res) => {
     res.json({ complaints: results });
   });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Place order route (requires authentication)
 app.post("/api/orders", (req, res) => {
@@ -918,12 +899,10 @@ app.post("/api/orders", (req, res) => {
   );
 });
 
-
-
 //---------------------------------------------------------------get products in customer side-------------------------------------------
 
 //-------TELIVISION---------------
-app.get('/api/televisions/led', (req, res) => {
+app.get("/api/televisions/led", (req, res) => {
   const sql = `
       SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
       FROM product_details
@@ -931,15 +910,15 @@ app.get('/api/televisions/led', (req, res) => {
       WHERE product_sub_category.p_sub_cata_name = 'LED'`;
 
   db.query(sql, (err, results) => {
-      if (err) {
-          console.error('Database error:', err);
-          return res.status(500).json({ error: 'Database error' });
-      }
-      res.json(results);
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
   });
 });
 
-app.get('/api/televisions/qled', (req, res) => {
+app.get("/api/televisions/qled", (req, res) => {
   const sql = `
       SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
       FROM product_details
@@ -948,51 +927,51 @@ app.get('/api/televisions/qled', (req, res) => {
   `;
 
   db.query(sql, (err, results) => {
-      if (err) {
-          console.error('Database error:', err);
-          return res.status(500).json({ error: 'Database error' });
-      }
-      res.json(results);
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
   });
 });
 //---------WASHING MACHINE-----------------
-app.get('/api/washingmachines/topload', (req, res) => {
-    const sql = `
+app.get("/api/washingmachines/topload", (req, res) => {
+  const sql = `
         SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
         FROM product_details
         JOIN product_sub_category ON product_details.p_sub_cata_id = product_sub_category.p_sub_cata_id
         WHERE product_sub_category.p_sub_cata_name = 'Top Load'
     `;
 
-    db.query(sql, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({ error: 'Database error' });
-        }
-        res.json(results);
-    });
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
 });
 
-app.get('/api/washingmachines/frontload', (req, res) => {
-    const sql = `
+app.get("/api/washingmachines/frontload", (req, res) => {
+  const sql = `
         SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
         FROM product_details
         JOIN product_sub_category ON product_details.p_sub_cata_id = product_sub_category.p_sub_cata_id
         WHERE product_sub_category.p_sub_cata_name = 'Front Load'
     `;
 
-    db.query(sql, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({ error: 'Database error' });
-        }
-        res.json(results);
-    });
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
 });
 
 //-------------------Air Conditioners----------------------
 
-app.get('/api/airconditioners/split', (req, res) => {
+app.get("/api/airconditioners/split", (req, res) => {
   const sql = `
       SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
       FROM product_details
@@ -1001,15 +980,15 @@ app.get('/api/airconditioners/split', (req, res) => {
   `;
 
   db.query(sql, (err, results) => {
-      if (err) {
-          console.error('Database error:', err);
-          return res.status(500).json({ error: 'Database error' });
-      }
-      res.json(results);
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
   });
 });
 
-app.get('/api/airconditioners/window', (req, res) => {
+app.get("/api/airconditioners/window", (req, res) => {
   const sql = `
       SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
       FROM product_details
@@ -1018,90 +997,86 @@ app.get('/api/airconditioners/window', (req, res) => {
   `;
 
   db.query(sql, (err, results) => {
-      if (err) {
-          console.error('Database error:', err);
-          return res.status(500).json({ error: 'Database error' });
-      }
-      res.json(results);
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
   });
 });
 
 //--------------------------REFRIGERATORS---------------------------
 
-
-
-
-
 // Single Door endpoint
-app.get('/api/refrigerators/singledoor', (req, res) => {
-    const sql = `
+app.get("/api/refrigerators/singledoor", (req, res) => {
+  const sql = `
         SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
         FROM product_details
         JOIN product_sub_category ON product_details.p_sub_cata_id = product_sub_category.p_sub_cata_id
         WHERE product_sub_category.p_sub_cata_name = 'Single Door'
     `;
 
-    db.query(sql, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({ error: 'Database error' });
-        }
-        res.json(results);
-    });
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
 });
 
 // Double Door endpoint
-app.get('/api/refrigerators/doubledoor', (req, res) => {
-    const sql = `
+app.get("/api/refrigerators/doubledoor", (req, res) => {
+  const sql = `
         SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
         FROM product_details
         JOIN product_sub_category ON product_details.p_sub_cata_id = product_sub_category.p_sub_cata_id
         WHERE product_sub_category.p_sub_cata_name = 'Double Door'
     `;
 
-    db.query(sql, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({ error: 'Database error' });
-        }
-        res.json(results);
-    });
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
 });
 
 // Triple Door endpoint
-app.get('/api/refrigerators/tripledoor', (req, res) => {
-    const sql = `
+app.get("/api/refrigerators/tripledoor", (req, res) => {
+  const sql = `
         SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
         FROM product_details
         JOIN product_sub_category ON product_details.p_sub_cata_id = product_sub_category.p_sub_cata_id
         WHERE product_sub_category.p_sub_cata_name = 'Tripple Door'
     `;
 
-    db.query(sql, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({ error: 'Database error' });
-        }
-        res.json(results);
-    });
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
 });
 
 // Side-by-Side endpoint
-app.get('/api/refrigerators/sidebyside', (req, res) => {
-    const sql = `
+app.get("/api/refrigerators/sidebyside", (req, res) => {
+  const sql = `
         SELECT product_details.*, product_sub_category.p_sub_cata_name AS subCategoryName
         FROM product_details
         JOIN product_sub_category ON product_details.p_sub_cata_id = product_sub_category.p_sub_cata_id
         WHERE product_sub_category.p_sub_cata_name = 'Side-by-side Door'
     `;
 
-    db.query(sql, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({ error: 'Database error' });
-        }
-        res.json(results);
-    });
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
 });
 
 // ---------------------- Server Start ----------------------

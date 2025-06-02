@@ -19,11 +19,11 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MySQL Connection
 const db = mysql.createConnection({
- host: "sql12.freesqldatabase.com",
-  user: "sql12782673",
-  password: "dqR9m9CNYS",
-  database: "sql12782673",
-  port: 3306,
+host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
 });
 
 db.connect((err) => {

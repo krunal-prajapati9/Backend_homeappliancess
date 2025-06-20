@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config(); // 👈 this must be first!
+require("dotenv").config(); 
 const mysql = require("mysql");
 
 const jwt = require("jsonwebtoken");
@@ -17,7 +17,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // MySQL Connection
 const db = mysql.createPool({
-  connectionLimit: 10,             // add a limit for connections in pool
+  connectionLimit: 10,            
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
